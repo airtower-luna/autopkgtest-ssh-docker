@@ -36,6 +36,12 @@ def init_container(args):
                           '>>/home/test/.ssh/authorized_keys'])
         testbed.exec_run(['chown', 'test:test',
                           '/home/test/.ssh/authorized_keys'])
+        if args.apt_proxy is not None:
+            testbed.exec_run(['sh', '-c',
+                              r'echo "Acquire::http::proxy \"'
+                              f'{args.apt_proxy}'
+                              r'\";" '
+                              '>/etc/apt/apt.conf.d/01proxy'])
 
         testbed.reload()
         host = testbed.attrs['NetworkSettings']['Networks']['bridge']['IPAddress']
@@ -68,7 +74,10 @@ if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser(
         description='Manage Docker testbed for autopkgtest-virt-ssh.')
+    # All subcommands need to share the same parameters.
     common = argparse.ArgumentParser(add_help=False)
+    common.add_argument('--apt-proxy', metavar='URL',
+                        help='proxy to use for apt')
     common.add_argument('--container', metavar='NAME',
                         help='the running testbed container')
     subparsers = parser.add_subparsers(required=True)
