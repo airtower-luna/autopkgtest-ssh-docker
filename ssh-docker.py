@@ -5,6 +5,15 @@ import secrets
 import sys
 from pathlib import Path
 
+
+def get_addr(net):
+    for t in ('GlobalIPv6Address', 'IPAddress'):
+        addr = net.get('GlobalIPv6Address')
+        if addr:
+            return addr
+    return None
+
+
 def init_container(args):
     """Set up a docker container to run tests in, output its details in
     the format that autopkgtest-virt-ssh expects.
@@ -44,7 +53,10 @@ def init_container(args):
                               '>/etc/apt/apt.conf.d/01proxy'])
 
         testbed.reload()
-        host = testbed.attrs['NetworkSettings']['Networks']['bridge']['IPAddress']
+        for net in testbed.attrs['NetworkSettings']['Networks'].values():
+            host = get_addr(net)
+            if host:
+                break
 
     print('login=test')
     print(f'hostname={host}')
