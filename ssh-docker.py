@@ -5,7 +5,7 @@ import secrets
 import sys
 from pathlib import Path
 
-def init_container():
+def init_container(args):
     """Set up a docker container to run tests in, output its details in
     the format that autopkgtest-virt-ssh expects.
     """
@@ -25,6 +25,7 @@ def init_container():
                 print(l['stream'], end='', file=sys.stderr)
             else:
                 print(l, file=sys.stderr)
+
         testbed = client.containers.run(
             image.id, name=f'autopkgtest-{secrets.token_hex(4)}',
             detach=True, auto_remove=True)
@@ -43,32 +44,41 @@ def init_container():
     print(f'hostname={host}')
     print('capabilities=isolation-container,revert,revert-full-system')
     print(f'identity={ssh_id!s}')
-    print(f'extraopts={testbed.name}')
+    print(f'extraopts=--container {testbed.name}')
 
 
-def cleanup(container):
+def cleanup(args):
     with contextlib.closing(docker.from_env()) as client:
-        testbed = client.containers.get(container)
+        testbed = client.containers.get(args.container)
         testbed.stop()
 
 
-def get_log(container):
+def revert(args):
+    init_container(args)
+    cleanup(args)
+
+
+def get_log(args):
     with contextlib.closing(docker.from_env()) as client:
-        testbed = client.containers.get(container)
+        testbed = client.containers.get(args.container)
         print(testbed.logs())
 
 
 if __name__ == '__main__':
-    command = sys.argv[1]
-    if command == 'open':
-        init_container()
-    elif command == 'cleanup':
-        cleanup(sys.argv[2])
-    elif command == 'revert':
-        cleanup(sys.argv[2])
-        init_container()
-    elif command == 'debug-failure':
-        get_log(sys.argv[2])
-    else:
-        print(f'invalid command {command}', file=sys.stderr)
-        sys.exit(1)
+    import argparse
+    parser = argparse.ArgumentParser(
+        description='Manage Docker testbed for autopkgtest-virt-ssh.')
+    common = argparse.ArgumentParser(add_help=False)
+    common.add_argument('--container', metavar='NAME',
+                        help='the running testbed container')
+    subparsers = parser.add_subparsers(required=True)
+    open_parser = subparsers.add_parser('open', parents=[common])
+    open_parser.set_defaults(func=init_container)
+    cleanup_parser = subparsers.add_parser('cleanup', parents=[common])
+    cleanup_parser.set_defaults(func=cleanup)
+    revert_parser = subparsers.add_parser('revert', parents=[common])
+    revert_parser.set_defaults(func=revert)
+    debug_parser = subparsers.add_parser('debug-failure', parents=[common])
+    debug_parser.set_defaults(func=get_log)
+    args = parser.parse_args()
+    args.func(args)
