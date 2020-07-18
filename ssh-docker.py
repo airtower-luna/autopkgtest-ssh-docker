@@ -106,14 +106,15 @@ if __name__ == '__main__':
     # they don't use them.
     common = argparse.ArgumentParser(add_help=False)
     common.add_argument('--apt-proxy', metavar='URL',
-                        help='Proxy to use for apt')
+                        help='Proxy to use for apt inside the running '
+                        'container.')
     common.add_argument('--dockerfile',
                         help='Build this Dockerfile and use the image '
                         'as the testbed. The parent directory of the file '
                         'is used as the build context for Docker.')
     common.add_argument('--image',
-                        help='If given alone: use this tag instead of '
-                        'building an image. If given with --dockerfile: '
+                        help='If given alone: use the named image instead '
+                        'of building an image. If given with --dockerfile: '
                         'tag the freshly build image with this tag.')
 
     # The extraopts parameters are only for commands on running
