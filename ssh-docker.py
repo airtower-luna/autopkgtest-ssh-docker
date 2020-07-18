@@ -27,13 +27,25 @@ def init_container(args):
     if ssh_id is None:
         raise ValueError('No usable SSH ID found!')
 
+    if args.dockerfile is None and args.image is None:
+        # No configuration, use default Dockerfile
+        dockerfile = Path(sys.argv[0]).parent / 'Dockerfile'
+    else:
+        # If dockerfile is None the image will be used without build.
+        dockerfile = Path(args.dockerfile) if args.dockerfile else None
+
     with contextlib.closing(docker.from_env()) as client:
-        image, buildlog = client.images.build(path=str(Path(sys.argv[0]).parent))
-        for l in buildlog:
-            if 'stream' in l:
-                print(l['stream'], end='', file=sys.stderr)
-            else:
-                print(l, file=sys.stderr)
+        if dockerfile:
+            image, buildlog = client.images.build(dockerfile=str(dockerfile),
+                                                  path=str(dockerfile.parent),
+                                                  tag=args.image)
+            for l in buildlog:
+                if 'stream' in l:
+                    print(l['stream'], end='', file=sys.stderr)
+                else:
+                    print(l, file=sys.stderr)
+        else:
+            image = client.images.get(args.image)
 
         testbed = client.containers.run(
             image.id, name=f'autopkgtest-{secrets.token_hex(4)}',
@@ -86,20 +98,38 @@ if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser(
         description='Manage Docker testbed for autopkgtest-virt-ssh.')
-    # All subcommands need to share the same parameters.
+
+    # All subcommands need to accept the custom parameters, even if
+    # they don't use them.
     common = argparse.ArgumentParser(add_help=False)
     common.add_argument('--apt-proxy', metavar='URL',
-                        help='proxy to use for apt')
-    common.add_argument('--container', metavar='NAME',
-                        help='the running testbed container')
+                        help='Proxy to use for apt')
+    common.add_argument('--dockerfile',
+                        help='Build this Dockerfile and use the image '
+                        'as the testbed. The parent directory of the file '
+                        'is used as the build context for Docker.')
+    common.add_argument('--image',
+                        help='If given alone: use this tag instead of '
+                        'building an image. If given with --dockerfile: '
+                        'tag the freshly build image with this tag.')
+
+    # The extraopts parameters are only for commands on running
+    # testbeds.
+    running = argparse.ArgumentParser(add_help=False)
+    running.add_argument('--container', metavar='NAME',
+                         help='Name of the running testbed container')
+
     subparsers = parser.add_subparsers(required=True)
     open_parser = subparsers.add_parser('open', parents=[common])
     open_parser.set_defaults(func=init_container)
-    cleanup_parser = subparsers.add_parser('cleanup', parents=[common])
+    cleanup_parser = subparsers.add_parser('cleanup',
+                                           parents=[common, running])
     cleanup_parser.set_defaults(func=cleanup)
-    revert_parser = subparsers.add_parser('revert', parents=[common])
+    revert_parser = subparsers.add_parser('revert',
+                                          parents=[common, running])
     revert_parser.set_defaults(func=revert)
-    debug_parser = subparsers.add_parser('debug-failure', parents=[common])
+    debug_parser = subparsers.add_parser('debug-failure',
+                                         parents=[common, running])
     debug_parser.set_defaults(func=get_log)
     args = parser.parse_args()
     args.func(args)
