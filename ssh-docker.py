@@ -74,7 +74,7 @@ def init_container(args):
     print(f'hostname={host}')
     print('capabilities=isolation-container,revert,revert-full-system')
     print(f'identity={ssh_id!s}')
-    print(f'extraopts=--container {testbed.name}')
+    print(f'extraopts=--container {testbed.name} --image {image.id}')
 
 
 def cleanup(args):
@@ -84,8 +84,11 @@ def cleanup(args):
 
 
 def revert(args):
-    init_container(args)
     cleanup(args)
+    # The extraopts set by the "open" command provide the image ID to
+    # use, so prevent rebuild.
+    args.dockerfile = None
+    init_container(args)
 
 
 def get_log(args):
