@@ -1,7 +1,6 @@
 FROM debian:sid
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     apt-utils \
-    bsdextrautils \
     dpkg-dev \
     openssh-server \
     sudo \
