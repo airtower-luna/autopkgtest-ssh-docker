@@ -34,11 +34,16 @@ def init_container(args):
         # If dockerfile is None the image will be used without build.
         dockerfile = Path(args.dockerfile) if args.dockerfile else None
 
+    env = dict()
+    if args.apt_proxy is not None:
+        env['http_proxy'] = args.apt_proxy
+
     with contextlib.closing(docker.from_env()) as client:
         if dockerfile:
             image, buildlog = client.images.build(dockerfile=str(dockerfile),
                                                   path=str(dockerfile.parent),
                                                   tag=args.image,
+                                                  buildargs=env,
                                                   forcerm=True)
             for l in buildlog:
                 if 'stream' in l:
@@ -50,6 +55,7 @@ def init_container(args):
 
         testbed = client.containers.run(
             image.id, name=f'autopkgtest-{secrets.token_hex(4)}',
+            environment=env,
             detach=True, auto_remove=True)
         print(testbed.name, file=sys.stderr)
 
