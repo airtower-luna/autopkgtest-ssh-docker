@@ -38,7 +38,8 @@ def init_container(args):
         if dockerfile:
             image, buildlog = client.images.build(dockerfile=str(dockerfile),
                                                   path=str(dockerfile.parent),
-                                                  tag=args.image)
+                                                  tag=args.image,
+                                                  forcerm=True)
             for l in buildlog:
                 if 'stream' in l:
                     print(l['stream'], end='', file=sys.stderr)
