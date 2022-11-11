@@ -13,6 +13,12 @@ configuration to connect to it.
 [`ssh-docker.py`](./ssh-docker.py) in this repository is such a
 script, and sets up a Docker container as the testbed for you.
 
+## Deprecation notice :warning:
+
+Autopkgtest has gained built-in support for Docker and Podman, so this
+tool is no longer needed. See:
+[`autopkgtest-virt-docker`](https://manpages.debian.org/testing/autopkgtest/autopkgtest-virt-docker.1.en.html)
+
 ## Usage
 
 Call `autopkgtest` as usual with the `ssh` virt driver, and pass the
