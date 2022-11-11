@@ -45,11 +45,11 @@ def init_container(args):
                                                   tag=args.image,
                                                   buildargs=env,
                                                   forcerm=True)
-            for l in buildlog:
-                if 'stream' in l:
-                    print(l['stream'], end='', file=sys.stderr)
+            for line in buildlog:
+                if 'stream' in line:
+                    print(line['stream'], end='', file=sys.stderr)
                 else:
-                    print(l, file=sys.stderr)
+                    print(line, file=sys.stderr)
         else:
             image = client.images.get(args.image)
 
